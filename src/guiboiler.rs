@@ -5,6 +5,10 @@ use crate::{
     kingdom::{KingdomID, ResourceType, ResourceTypeEnum},
 };
 
+// // // // // // // // // // // // // //
+//       Layouts
+// // // // // // // // // // // // // //
+
 fn column_internal(size: Size<Val>) -> NodeBundle {
     NodeBundle {
         style: Style {
@@ -112,6 +116,10 @@ fn row_internal(size: Size<Val>) -> NodeBundle {
         ..Default::default()
     }
 }
+
+// // // // // // // // // // // // // //
+//       Individual GUI Elements
+// // // // // // // // // // // // // //
 
 pub fn button(style: ButtonTypeEnum) -> ButtonBundle {
     match style {
