@@ -1,9 +1,11 @@
 use bevy::prelude::*;
 use bevy::{log::LogSettings, window::PresentMode, winit::WinitSettings};
 
+use game::GamePlugin;
 use gui::GUIPlugin;
 use kingdom::*;
 
+mod game;
 mod gui;
 mod guiboiler;
 mod kingdom;
@@ -45,6 +47,7 @@ fn main() {
 
     app.add_plugins(DefaultPlugins)
         .add_plugin(KingdomPlugin)
+        .add_plugin(GamePlugin)
         .add_plugin(GUIPlugin);
 
     // app.add_system(button_system);
