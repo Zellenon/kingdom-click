@@ -185,7 +185,7 @@ fn spawn_game_screen(
                                 .insert(GodActionButton)
                                 .insert(ResourceReference(entity))
                                 .insert(ResourceInteractionButton(|_, resource, _, _| {
-                                    (*resource).value += 10;
+                                    (*resource).value += 1;
                                 }))
                                 .with_children(|button| {
                                     // Resource Name
