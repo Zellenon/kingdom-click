@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 
 use crate::{
-    gui::{self, ButtonTypeEnum, ResourceReference, ResourceTextBundle, TextTypeEnum},
+    gui::{
+        self, ButtonTypeEnum, DisplayBundle, DisplayTypeEnum, FamilyBundle, ResourceDisplayText,
+        ResourceReference, ResourceTextBundle, FONT_NAME, STANDARD_TEXT_STYLE,
+    },
     kingdom::{KingdomID, ResourceType, ResourceTypeEnum},
 };
 
@@ -18,7 +21,8 @@ fn column_internal(size: Size<Val>) -> NodeBundle {
             size,
             ..Default::default()
         },
-        color: Color::NONE.into(),
+        color: Color::rgb(0.3, 0.2, 0.0).into(),
+        // color: Color::NONE.into(),
         ..Default::default()
     }
 }
@@ -130,7 +134,7 @@ pub fn button(style: ButtonTypeEnum) -> ButtonBundle {
                 // center button
                 margin: Rect::all(Val::Auto),
                 // horizontally center child text
-                justify_content: JustifyContent::Center,
+                justify_content: JustifyContent::SpaceEvenly,
                 // vertically center child text
                 align_items: AlignItems::Center,
                 flex_direction: FlexDirection::Row,
@@ -157,12 +161,12 @@ pub fn button(style: ButtonTypeEnum) -> ButtonBundle {
     }
 }
 
-pub fn text(asset_server: &Res<AssetServer>, text: String, style: TextTypeEnum) -> TextBundle {
+pub fn text(asset_server: &Res<AssetServer>, text: String, style: DisplayTypeEnum) -> TextBundle {
     TextBundle {
         text: Text::with_section(
             text,
             TextStyle {
-                font: asset_server.load("fonts/iniya.otf"),
+                font: asset_server.load(FONT_NAME),
                 font_size: 40.0,
                 color: Color::rgb(0.9, 0.9, 0.9),
             },
@@ -174,8 +178,6 @@ pub fn text(asset_server: &Res<AssetServer>, text: String, style: TextTypeEnum) 
 
 pub fn resource_text(
     asset_server: &Res<AssetServer>,
-    // kingdom: usize,
-    // resource: ResourceTypeEnum,
     resource_reference: ResourceReference,
 ) -> ResourceTextBundle {
     ResourceTextBundle {
@@ -184,13 +186,57 @@ pub fn resource_text(
             TextStyle {
                 font: asset_server.load("fonts/iniya.otf"),
                 font_size: 40.0,
-                color: Color::rgb(0.9, 0.9, 0.9),
+                color: Color::rgb(0.5, 1., 0.6),
             },
             Default::default(),
         ),
         resource_reference,
-        // resource: ResourceType(resource),
-        // kingdom: KingdomID(kingdom),
         ..default()
     }
+}
+
+pub fn display(
+    asset_server: &Res<AssetServer>,
+    style: DisplayTypeEnum,
+    children: Vec<DisplayBundle>,
+) -> FamilyBundle {
+    let display = match style {
+        DisplayTypeEnum::StandardText(text) => DisplayBundle::DisplayText(TextBundle {
+            text: Text::with_section(text, STANDARD_TEXT_STYLE(asset_server), Default::default()),
+            ..default()
+        }),
+        DisplayTypeEnum::ResourceText(resource) => {
+            DisplayBundle::DisplayResource(ResourceTextBundle {
+                text: Text::with_section(
+                    "",
+                    TextStyle {
+                        font: asset_server.load(FONT_NAME),
+                        font_size: 20.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                    },
+                    Default::default(),
+                ),
+                resource_reference: resource,
+                // resource: ResourceType(resource),
+                // kingdom: KingdomID(kingdom),
+                ..default()
+            })
+        }
+        DisplayTypeEnum::ResourceIcon(resource_type) => todo!(),
+    };
+    FamilyBundle {
+        parent: display,
+        children,
+    }
+}
+
+pub fn frame(node: NodeBundle, children: Vec<DisplayBundle>) -> FamilyBundle {
+    FamilyBundle {
+        parent: DisplayBundle::FrameDisplay(node),
+        children: children,
+    }
+}
+
+pub fn none() -> Vec<DisplayBundle> {
+    Vec::new()
 }

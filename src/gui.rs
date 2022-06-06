@@ -1,8 +1,18 @@
 use bevy::{prelude::*, ui::FocusPolicy};
 
 use crate::guiboiler::*;
-use crate::kingdom::{self, Kingdom, KingdomID, Resource, ResourceType};
+use crate::kingdom::{self, Kingdom, KingdomID, Resource, ResourceType, ResourceTypeEnum};
 use crate::AppState;
+
+pub const FONT_NAME: &str = "fonts/iniya.otf";
+
+pub fn STANDARD_TEXT_STYLE(asset_server: &Res<AssetServer>) -> TextStyle {
+    TextStyle {
+        font: asset_server.load(FONT_NAME),
+        font_size: 40.0,
+        color: Color::rgb(0.9, 0.9, 0.9),
+    }
+}
 
 #[derive(Component)]
 pub struct MainMenuScreen;
@@ -28,7 +38,7 @@ pub struct ResourceDisplayText;
 pub struct ButtonType(ButtonTypeEnum);
 
 #[derive(Component)]
-pub struct ResourceReference(Entity);
+pub struct ResourceReference(pub Entity);
 
 impl Default for ResourceReference {
     fn default() -> Self {
@@ -43,9 +53,19 @@ pub enum ButtonTypeEnum {
     SettingsButton,
 }
 
-#[derive(Hash)]
-pub enum TextTypeEnum {
-    ResourceButtonText,
+#[derive()]
+pub enum DisplayTypeEnum {
+    StandardText(String),
+    ResourceText(ResourceReference),
+    ResourceIcon(ResourceTypeEnum),
+}
+
+#[derive()]
+pub enum DisplayBundle {
+    DisplayText(TextBundle),
+    DisplayResource(ResourceTextBundle),
+    IconDisplay(SpriteBundle),
+    FrameDisplay(NodeBundle),
 }
 
 #[derive(Bundle, Default)]
@@ -62,6 +82,67 @@ pub struct ResourceTextBundle {
     pub global_transform: GlobalTransform,
     pub visibility: Visibility,
 }
+
+#[derive()]
+pub struct FamilyBundle {
+    pub parent: DisplayBundle,
+    pub children: Vec<DisplayBundle>,
+}
+
+// pub fn spawn_with_children(master: &ChildBuilder<'_, '_, '_>, fam_bundle: FamilyBundle) {
+//     let FamilyBundle {
+//         parent: parent,
+//         children: children,
+//     } = fam_bundle;
+//     let parent_bundle = match parent {
+//         DisplayBundle::DisplayText(bundle) => {
+//             (*master).spawn_bundle(bundle).with_children(|parent| {
+//                 for child in children {
+//                     match child {
+//                         DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
+//                     };
+//                 }
+//             })
+//         }
+//         DisplayBundle::DisplayResource(bundle) => {
+//             master.spawn_bundle(bundle).with_children(|parent| {
+//                 for child in children {
+//                     match child {
+//                         DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
+//                     };
+//                 }
+//             })
+//         }
+//         DisplayBundle::IconDisplay(bundle) => master.spawn_bundle(bundle).with_children(|parent| {
+//             for child in children {
+//                 match child {
+//                     DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
+//                     DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
+//                     DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
+//                     DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
+//                 };
+//             }
+//         }),
+//         DisplayBundle::FrameDisplay(bundle) => {
+//             master.spawn_bundle(bundle).with_children(|parent| {
+//                 for child in children {
+//                     match child {
+//                         DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
+//                     };
+//                 }
+//             })
+//         }
+//     };
+// }
 
 pub struct GUIPlugin;
 
@@ -91,6 +172,8 @@ fn ui_setup(mut commands: Commands) {
 // can just handle behavior and data.
 //
 // TODO: Make color constants
+//
+// TODO:
 
 // // // // // // // // // // // // // //
 //       Global Update Systems
@@ -167,15 +250,17 @@ fn spawn_game_screen(
 
     let kingdom_sidebar_generator =
         |parent: &mut ChildBuilder<'_, '_, '_>, id: &usize, name: &String| {
+            // spawn_with_children(parent, frame(column_perc(30., -1.), none()));
+
             parent
-                .spawn_bundle(column_perc(30., -1.))
+                .spawn_bundle(column_perc(30., 75.))
                 .with_children(|parent| {
+                    parent.spawn_bundle(column_perc(100., 10.));
                     parent.spawn_bundle(text(
                         &asset_server,
                         format!("Kingdom {}", id).to_string(),
-                        TextTypeEnum::ResourceButtonText,
+                        DisplayTypeEnum::StandardText(format!("Kingdom {}", id).to_string()),
                     ));
-                    // for resource in ResourceTypeEnum::iter() {
                     for (entity, ResourceType(resource_type), KingdomID(resource_kingdom)) in
                         resource_query.iter()
                     {
@@ -189,10 +274,12 @@ fn spawn_game_screen(
                                 }))
                                 .with_children(|button| {
                                     // Resource Name
+                                    // button.spawn_bundle(row_perc(100., 100.)).with_children(
+                                    //     |button| {
                                     button.spawn_bundle(text(
                                         &asset_server,
                                         resource_type.as_ref().to_string(),
-                                        TextTypeEnum::ResourceButtonText,
+                                        DisplayTypeEnum::ResourceText(ResourceReference(entity)),
                                     ));
 
                                     // Resource Display
@@ -204,6 +291,7 @@ fn spawn_game_screen(
                                         ))
                                         .insert(ResourceDisplayText);
                                 });
+                            // });
                         }
                     }
                 });
@@ -244,7 +332,7 @@ fn spawn_main_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                     button.spawn_bundle(text(
                         &asset_server,
                         "Start".to_string(),
-                        TextTypeEnum::ResourceButtonText,
+                        DisplayTypeEnum::StandardText("Start".to_string()),
                     ));
                 });
         });
