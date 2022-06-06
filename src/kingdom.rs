@@ -11,6 +11,7 @@ pub struct Kingdom;
 #[derive(Debug, Component)]
 pub struct Resource {
     pub value: usize,
+    pub change: usize,
 }
 
 #[derive(Component)]
@@ -72,7 +73,10 @@ fn setup_kingdoms(mut commands: Commands) {
                 for resource_type in starter_resources.iter() {
                     kingdom
                         .spawn()
-                        .insert(Resource { value: 50 })
+                        .insert(Resource {
+                            value: 50,
+                            change: 0,
+                        })
                         .insert(ResourceType(*resource_type))
                         .insert(KingdomID(i));
                 }

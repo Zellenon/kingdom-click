@@ -1,5 +1,6 @@
 use bevy::{prelude::*, ui::FocusPolicy};
 
+use crate::game::{GodActionEvent, ResourceAlterationEvent};
 use crate::guiboiler::*;
 use crate::kingdom::{self, Kingdom, KingdomID, Resource, ResourceType, ResourceTypeEnum};
 use crate::AppState;
@@ -24,9 +25,10 @@ pub struct MainMenuStartButton;
 pub struct GodActionButton;
 
 #[derive(Component)]
-pub struct ResourceInteractionButton(
-    pub fn(Entity, &mut kingdom::Resource, &ResourceType, &KingdomID) -> (),
-);
+pub struct ResourceInteractionButton {
+    pub interactions: Vec<(Entity, fn(usize) -> usize)>,
+    pub message: String,
+}
 
 #[derive(Component)]
 pub struct GameScreen;
@@ -89,61 +91,6 @@ pub struct FamilyBundle {
     pub children: Vec<DisplayBundle>,
 }
 
-// pub fn spawn_with_children(master: &ChildBuilder<'_, '_, '_>, fam_bundle: FamilyBundle) {
-//     let FamilyBundle {
-//         parent: parent,
-//         children: children,
-//     } = fam_bundle;
-//     let parent_bundle = match parent {
-//         DisplayBundle::DisplayText(bundle) => {
-//             (*master).spawn_bundle(bundle).with_children(|parent| {
-//                 for child in children {
-//                     match child {
-//                         DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
-//                         DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
-//                         DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
-//                         DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
-//                     };
-//                 }
-//             })
-//         }
-//         DisplayBundle::DisplayResource(bundle) => {
-//             master.spawn_bundle(bundle).with_children(|parent| {
-//                 for child in children {
-//                     match child {
-//                         DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
-//                         DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
-//                         DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
-//                         DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
-//                     };
-//                 }
-//             })
-//         }
-//         DisplayBundle::IconDisplay(bundle) => master.spawn_bundle(bundle).with_children(|parent| {
-//             for child in children {
-//                 match child {
-//                     DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
-//                     DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
-//                     DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
-//                     DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
-//                 };
-//             }
-//         }),
-//         DisplayBundle::FrameDisplay(bundle) => {
-//             master.spawn_bundle(bundle).with_children(|parent| {
-//                 for child in children {
-//                     match child {
-//                         DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
-//                         DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
-//                         DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
-//                         DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
-//                     };
-//                 }
-//             })
-//         }
-//     };
-// }
-
 pub struct GUIPlugin;
 
 impl Plugin for GUIPlugin {
@@ -154,12 +101,20 @@ impl Plugin for GUIPlugin {
             .add_system_set(SystemSet::on_exit(AppState::MainMenu).with_system(remove_main_menu));
 
         app.add_system_set(SystemSet::on_enter(AppState::Playing).with_system(spawn_game_screen))
-            // .add_system_set(SystemSet::on_update(AppState::Playing).with_system(update_game_screen))
+            .add_system_set(
+                SystemSet::on_update(AppState::Playing)
+                    .label("godaction")
+                    .with_system(send_god_action),
+            )
+            .add_system_set(
+                SystemSet::on_update(AppState::Playing)
+                    .before("godaction")
+                    .with_system(resource_text_update)
+                    .with_system(do_resource_interaction),
+            )
             .add_system_set(SystemSet::on_exit(AppState::Playing).with_system(remove_game_screen));
 
-        app.add_system(button_graphics_changes)
-            .add_system(resource_text_update)
-            .add_system(do_resource_interaction);
+        app.add_system(button_graphics_changes);
     }
 }
 
@@ -181,15 +136,16 @@ fn ui_setup(mut commands: Commands) {
 
 fn button_graphics_changes(
     mut interaction_query: Query<
-        (&Interaction, &mut UiColor, &Children),
+        (&Interaction, &mut UiColor),
         (Changed<Interaction>, With<Button>),
     >,
     // mut text_query: Query<&mut Text>,
 ) {
-    for (interaction, mut color, children) in interaction_query.iter_mut() {
+    for (interaction, mut color) in interaction_query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
                 // text.sections[0].value = "Pressed".to_string();
+                println!("Click!");
                 *color = Color::rgb(0.3, 0.3, 0.3).into();
             }
             Interaction::Hovered => {
@@ -209,29 +165,52 @@ fn resource_text_update(
     mut res_query: Query<&Resource>,
 ) {
     for (mut text, ResourceReference(entity)) in text_query.iter_mut() {
-        let Resource { value: val } = res_query.get_mut(*entity).unwrap();
+        let Resource {
+            value: val,
+            change: _,
+        } = res_query.get_mut(*entity).unwrap();
         text.sections[0].value = val.to_string();
     }
 }
 
 fn do_resource_interaction(
-    mut res_query: Query<(Entity, &mut Resource, &ResourceType, &KingdomID)>,
-    mut button_query: Query<
-        (&Interaction, &ResourceReference, &ResourceInteractionButton),
-        (Changed<Interaction>, With<ResourceInteractionButton>),
-    >,
+    // mut res_query: Query<(Entity, &mut Resource, &ResourceType, &KingdomID)>,
+    mut button_query: Query<(&Interaction, &ResourceInteractionButton), Changed<Interaction>>,
+    mut ev_interactions: EventWriter<ResourceAlterationEvent>,
 ) {
-    for (interaction, ResourceReference(resource_entity), ResourceInteractionButton(command)) in
-        button_query.iter_mut()
+    for (
+        interaction,
+        ResourceInteractionButton {
+            interactions,
+            message,
+        },
+    ) in button_query.iter_mut()
     {
         match *interaction {
             Interaction::Clicked => {
-                let (_, mut resource, resource_type, kingdom_id) =
-                    res_query.get_mut(*resource_entity).unwrap();
-                command(*resource_entity, &mut *resource, resource_type, kingdom_id);
+                println!("Sending interaction event.");
+                println!("{}", message);
+                ev_interactions.send(ResourceAlterationEvent {
+                    message: (*message).to_string(),
+                    changes: interactions.clone(),
+                });
             }
-            Interaction::Hovered => {}
-            Interaction::None => {}
+            _ => {}
+        }
+    }
+}
+
+fn send_god_action(
+    mut button_query: Query<&Interaction, (Changed<Interaction>, With<GodActionButton>)>,
+    mut ev_interactions: EventWriter<GodActionEvent>,
+) {
+    for interaction in button_query.iter_mut() {
+        match *interaction {
+            Interaction::Clicked => {
+                println!("Sending god event.");
+                ev_interactions.send(GodActionEvent);
+            }
+            _ => {}
         }
     }
 }
@@ -269,9 +248,31 @@ fn spawn_game_screen(
                                 .spawn_bundle(button(ButtonTypeEnum::MainResourceButton))
                                 .insert(GodActionButton)
                                 .insert(ResourceReference(entity))
-                                .insert(ResourceInteractionButton(|_, resource, _, _| {
-                                    (*resource).value += 1;
-                                }))
+                                .insert(ResourceInteractionButton {
+                                    interactions: vec![(entity, |resource| resource + 1)],
+                                    message: match resource_type {
+                                        ResourceTypeEnum::Food => "You bless the fields.",
+                                        ResourceTypeEnum::Industry => {
+                                            "You inspire the laborers with vigor."
+                                        }
+                                        ResourceTypeEnum::Faith => {
+                                            "Minor miracles cultivate the people's faith in you."
+                                        }
+                                        ResourceTypeEnum::Populace => {
+                                            "Blessings of fertility bolster the populace."
+                                        }
+                                        ResourceTypeEnum::Military => {
+                                            "Visions of glorious crusades dance in their heads."
+                                        }
+                                        ResourceTypeEnum::Happiness => {
+                                            "You help an old woman find her keys."
+                                        }
+                                        ResourceTypeEnum::ERROR => {
+                                            "If you're seeing this, there's a problem."
+                                        }
+                                    }
+                                    .to_string(),
+                                })
                                 .with_children(|button| {
                                     // Resource Name
                                     // button.spawn_bundle(row_perc(100., 100.)).with_children(
@@ -359,3 +360,58 @@ fn remove_main_menu(mut commands: Commands, menu_query: Query<Entity, With<MainM
         commands.entity(menu.into()).despawn_recursive();
     }
 }
+
+// pub fn spawn_with_children(master: &ChildBuilder<'_, '_, '_>, fam_bundle: FamilyBundle) {
+//     let FamilyBundle {
+//         parent: parent,
+//         children: children,
+//     } = fam_bundle;
+//     let parent_bundle = match parent {
+//         DisplayBundle::DisplayText(bundle) => {
+//             (*master).spawn_bundle(bundle).with_children(|parent| {
+//                 for child in children {
+//                     match child {
+//                         DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
+//                     };
+//                 }
+//             })
+//         }
+//         DisplayBundle::DisplayResource(bundle) => {
+//             master.spawn_bundle(bundle).with_children(|parent| {
+//                 for child in children {
+//                     match child {
+//                         DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
+//                     };
+//                 }
+//             })
+//         }
+//         DisplayBundle::IconDisplay(bundle) => master.spawn_bundle(bundle).with_children(|parent| {
+//             for child in children {
+//                 match child {
+//                     DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
+//                     DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
+//                     DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
+//                     DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
+//                 };
+//             }
+//         }),
+//         DisplayBundle::FrameDisplay(bundle) => {
+//             master.spawn_bundle(bundle).with_children(|parent| {
+//                 for child in children {
+//                     match child {
+//                         DisplayBundle::DisplayText(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::DisplayResource(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::IconDisplay(bundle) => parent.spawn_bundle(bundle),
+//                         DisplayBundle::FrameDisplay(bundle) => parent.spawn_bundle(bundle),
+//                     };
+//                 }
+//             })
+//         }
+//     };
+// }

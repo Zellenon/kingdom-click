@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
-use crate::{
-    gui::{
-        self, ButtonTypeEnum, DisplayBundle, DisplayTypeEnum, FamilyBundle, ResourceDisplayText,
-        ResourceReference, ResourceTextBundle, FONT_NAME, STANDARD_TEXT_STYLE,
-    },
-    kingdom::{KingdomID, ResourceType, ResourceTypeEnum},
+use crate::gui::{
+    ButtonTypeEnum, DisplayBundle, DisplayTypeEnum, FamilyBundle, ResourceReference,
+    ResourceTextBundle, FONT_NAME, STANDARD_TEXT_STYLE,
 };
 
 // // // // // // // // // // // // // //
@@ -184,7 +181,7 @@ pub fn resource_text(
         text: Text::with_section(
             "",
             TextStyle {
-                font: asset_server.load("fonts/iniya.otf"),
+                font: asset_server.load(FONT_NAME),
                 font_size: 40.0,
                 color: Color::rgb(0.5, 1., 0.6),
             },
