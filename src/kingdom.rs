@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 // use std::cmp::{max, min};
-use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter};
 
 pub struct KingdomPlugin;

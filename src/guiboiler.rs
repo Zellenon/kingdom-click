@@ -159,17 +159,32 @@ pub fn button(style: ButtonTypeEnum) -> ButtonBundle {
 }
 
 pub fn text(asset_server: &Res<AssetServer>, text: String, style: DisplayTypeEnum) -> TextBundle {
-    TextBundle {
-        text: Text::with_section(
-            text,
-            TextStyle {
-                font: asset_server.load(FONT_NAME),
-                font_size: 40.0,
-                color: Color::rgb(0.9, 0.9, 0.9),
-            },
-            Default::default(),
-        ),
-        ..default()
+    match style {
+        DisplayTypeEnum::StandardText(_) => TextBundle {
+            text: Text::with_section(
+                text,
+                TextStyle {
+                    font: asset_server.load(FONT_NAME),
+                    font_size: 40.0,
+                    color: Color::rgb(0.9, 0.9, 0.9),
+                },
+                Default::default(),
+            ),
+            ..default()
+        },
+        DisplayTypeEnum::ResourceText(_) => TextBundle {
+            text: Text::with_section(
+                text,
+                TextStyle {
+                    font: asset_server.load(FONT_NAME),
+                    font_size: 40.0,
+                    color: Color::rgb(0.9, 0.9, 0.9),
+                },
+                Default::default(),
+            ),
+            ..default()
+        },
+        DisplayTypeEnum::ResourceIcon(_) => todo!(),
     }
 }
 

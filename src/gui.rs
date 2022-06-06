@@ -145,7 +145,6 @@ fn button_graphics_changes(
         match *interaction {
             Interaction::Clicked => {
                 // text.sections[0].value = "Pressed".to_string();
-                println!("Click!");
                 *color = Color::rgb(0.3, 0.3, 0.3).into();
             }
             Interaction::Hovered => {
@@ -188,8 +187,6 @@ fn do_resource_interaction(
     {
         match *interaction {
             Interaction::Clicked => {
-                println!("Sending interaction event.");
-                println!("{}", message);
                 ev_interactions.send(ResourceAlterationEvent {
                     message: (*message).to_string(),
                     changes: interactions.clone(),
@@ -207,7 +204,6 @@ fn send_god_action(
     for interaction in button_query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
-                println!("Sending god event.");
                 ev_interactions.send(GodActionEvent);
             }
             _ => {}
@@ -232,13 +228,13 @@ fn spawn_game_screen(
             // spawn_with_children(parent, frame(column_perc(30., -1.), none()));
 
             parent
-                .spawn_bundle(column_perc(30., 75.))
+                .spawn_bundle(column_perc(25., 100.))
                 .with_children(|parent| {
                     parent.spawn_bundle(column_perc(100., 10.));
                     parent.spawn_bundle(text(
                         &asset_server,
-                        format!("Kingdom {}", id).to_string(),
-                        DisplayTypeEnum::StandardText(format!("Kingdom {}", id).to_string()),
+                        format!("{}", name).to_string(),
+                        DisplayTypeEnum::StandardText(format!("{}", name).to_string()),
                     ));
                     for (entity, ResourceType(resource_type), KingdomID(resource_kingdom)) in
                         resource_query.iter()
@@ -306,7 +302,7 @@ fn spawn_game_screen(
             kingdom_sidebar_generator(parent, &id, &name);
 
             // Spacer
-            parent.spawn_bundle(column_perc(40., -1.));
+            parent.spawn_bundle(column_perc(50., -1.));
 
             // Kingdom 2 Sidebar
             let (KingdomID(id), kingdom::Name(name)) = kingdom_iter.next().unwrap();

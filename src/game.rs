@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{gui::ResourceReference, kingdom};
+use crate::kingdom::Resource;
 
 pub struct ResourceAlterationEvent {
     pub message: String,
@@ -59,7 +59,7 @@ fn check_for_god_action(
     }
 }
 
-fn clear_change(mut resource_query: Query<&mut kingdom::Resource>) {
+fn clear_change(mut resource_query: Query<&mut Resource>) {
     println!("Clearing changes.");
     for mut resource in resource_query.iter_mut() {
         resource.change = 0;
@@ -68,14 +68,12 @@ fn clear_change(mut resource_query: Query<&mut kingdom::Resource>) {
 
 fn tally_changes(
     mut state: ResMut<State<TurnState>>,
-    mut resource_query: Query<&mut kingdom::Resource>,
+    mut resource_query: Query<&mut Resource>,
     mut ev_resource_changes: EventReader<ResourceAlterationEvent>,
     mut log: ResMut<Log>,
 ) {
     for ResourceAlterationEvent { message, changes } in ev_resource_changes.iter() {
-        println!("parsing event");
         for (entity, change) in changes {
-            println!("parsing change");
             let mut resource = resource_query.get_mut(*entity).unwrap();
             let change = change(resource.value) - resource.value;
             (*resource).change += change;
@@ -85,13 +83,9 @@ fn tally_changes(
     state.set(TurnState::ApplyingChanges);
 }
 
-fn apply_changes(
-    mut state: ResMut<State<TurnState>>,
-    mut resource_query: Query<&mut kingdom::Resource>,
-) {
+fn apply_changes(mut state: ResMut<State<TurnState>>, mut resource_query: Query<&mut Resource>) {
     for mut resource in resource_query.iter_mut() {
         resource.value += resource.change;
     }
     state.set(TurnState::WaitingForGod);
-    println!("Finished Turn.");
 }

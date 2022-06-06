@@ -1,5 +1,5 @@
+use bevy::log::LogSettings;
 use bevy::prelude::*;
-use bevy::{log::LogSettings, window::PresentMode, winit::WinitSettings};
 
 use game::GamePlugin;
 use gui::GUIPlugin;
@@ -9,8 +9,6 @@ mod game;
 mod gui;
 mod guiboiler;
 mod kingdom;
-
-// use bevy_egui::{egui, EguiContext, EguiPlugin, EguiSettings};
 
 const BACKGROUND_COLOR: Color = Color::rgb(0.05, 0.066, 0.09);
 
