@@ -7,6 +7,10 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.7.0", features = ["dynamic"] }
+# bevy = { version = "0.7.0" }
 bevy_egui = "0.14"
 strum = "0.24"
 strum_macros = "0.24"
+
+# [target.wasm32-unknown-unknown]
+# runner = "wasm-server-runner"
