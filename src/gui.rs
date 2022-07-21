@@ -1,11 +1,12 @@
+use bevy::text::Text2dBounds;
 use bevy::{prelude::*, ui::FocusPolicy};
 
-use crate::game::{GodActionEvent, ResourceAlterationEvent};
+use crate::game::{GodActionEvent, Log, ResourceAlterationEvent, TurnState};
 use crate::guiboiler::*;
 use crate::kingdom::{self, Kingdom, KingdomID, Resource, ResourceType, ResourceTypeEnum};
 use crate::AppState;
 
-pub const FONT_NAME: &str = "fonts/iniya.otf";
+pub const FONT_NAME: &str = "fonts/Rise of Kingdom.ttf";
 
 pub fn STANDARD_TEXT_STYLE(asset_server: &Res<AssetServer>) -> TextStyle {
     TextStyle {
@@ -35,6 +36,9 @@ pub struct GameScreen;
 
 #[derive(Component)]
 pub struct ResourceDisplayText;
+
+#[derive(Component)]
+pub struct LogText;
 
 #[derive(Component)]
 pub struct ButtonType(ButtonTypeEnum);
@@ -112,7 +116,8 @@ impl Plugin for GUIPlugin {
                     .with_system(resource_text_update)
                     .with_system(do_resource_interaction),
             )
-            .add_system_set(SystemSet::on_exit(AppState::Playing).with_system(remove_game_screen));
+            .add_system_set(SystemSet::on_exit(AppState::Playing).with_system(remove_game_screen))
+            .add_system_set(SystemSet::on_enter(TurnState::WaitingForGod).with_system(update_log));
 
         app.add_system(button_graphics_changes);
     }
@@ -127,8 +132,6 @@ fn ui_setup(mut commands: Commands) {
 // can just handle behavior and data.
 //
 // TODO: Make color constants
-//
-// TODO:
 
 // // // // // // // // // // // // // //
 //       Global Update Systems
@@ -211,6 +214,20 @@ fn send_god_action(
     }
 }
 
+fn update_log(mut log_display_query: Query<(&LogText, &mut Text)>, log_text: Res<Log>) {
+    for (_, mut text) in log_display_query.iter_mut() {
+        text.sections[0].value = (log_text
+            .0
+            .iter()
+            .map(|x| {
+                println!("{}", x.1);
+                format!("{}\n{}", x.0, x.1)
+            })
+            .collect::<Vec<String>>())
+        .join("\n");
+    }
+}
+
 // // // // // // // // // // // // // //
 //       Game Screen Changing Functions
 // // // // // // // // // // // // // //
@@ -223,77 +240,72 @@ fn spawn_game_screen(
 ) {
     let mut kingdom_iter = kingdom_query.iter();
 
-    let kingdom_sidebar_generator =
-        |parent: &mut ChildBuilder<'_, '_, '_>, id: &usize, name: &String| {
-            // spawn_with_children(parent, frame(column_perc(30., -1.), none()));
-
-            parent
-                .spawn_bundle(column_perc(25., 100.))
-                .with_children(|parent| {
-                    parent.spawn_bundle(column_perc(100., 10.));
-                    parent.spawn_bundle(text(
-                        &asset_server,
-                        format!("{}", name).to_string(),
-                        DisplayTypeEnum::StandardText(format!("{}", name).to_string()),
-                    ));
-                    for (entity, ResourceType(resource_type), KingdomID(resource_kingdom)) in
-                        resource_query.iter()
-                    {
-                        if resource_kingdom == id {
-                            parent
-                                .spawn_bundle(button(ButtonTypeEnum::MainResourceButton))
-                                .insert(GodActionButton)
-                                .insert(ResourceReference(entity))
-                                .insert(ResourceInteractionButton {
-                                    interactions: vec![(entity, |resource| resource + 1)],
-                                    message: match resource_type {
-                                        ResourceTypeEnum::Food => "You bless the fields.",
-                                        ResourceTypeEnum::Industry => {
-                                            "You inspire the laborers with vigor."
-                                        }
-                                        ResourceTypeEnum::Faith => {
-                                            "Minor miracles cultivate the people's faith in you."
-                                        }
-                                        ResourceTypeEnum::Populace => {
-                                            "Blessings of fertility bolster the populace."
-                                        }
-                                        ResourceTypeEnum::Military => {
-                                            "Visions of glorious crusades dance in their heads."
-                                        }
-                                        ResourceTypeEnum::Happiness => {
-                                            "You help an old woman find her keys."
-                                        }
-                                        ResourceTypeEnum::ERROR => {
-                                            "If you're seeing this, there's a problem."
-                                        }
+    let kingdom_sidebar_generator = |parent: &mut ChildBuilder<'_, '_, '_>,
+                                     id: &usize,
+                                     name: &String| {
+        parent
+            .spawn_bundle(column_perc(25., 100.))
+            .with_children(|parent| {
+                parent.spawn_bundle(column_perc(100., 10.));
+                parent.spawn_bundle(text(
+                    &asset_server,
+                    format!("{}", name).to_string(),
+                    DisplayTypeEnum::StandardText(format!("{}", name).to_string()),
+                ));
+                for (entity, ResourceType(resource_type), KingdomID(resource_kingdom)) in
+                    resource_query.iter()
+                {
+                    if resource_kingdom == id {
+                        parent
+                            .spawn_bundle(button(ButtonTypeEnum::MainResourceButton))
+                            .insert(GodActionButton)
+                            .insert(ResourceReference(entity))
+                            .insert(ResourceInteractionButton {
+                                interactions: vec![(entity, |resource| resource + 1)],
+                                message: match resource_type {
+                                    ResourceTypeEnum::Food => "You bless the fields.",
+                                    ResourceTypeEnum::Industry => {
+                                        "You inspire the laborers with vigor."
                                     }
-                                    .to_string(),
-                                })
-                                .with_children(|button| {
-                                    // Resource Name
-                                    // button.spawn_bundle(row_perc(100., 100.)).with_children(
-                                    //     |button| {
-                                    button.spawn_bundle(text(
-                                        &asset_server,
-                                        resource_type.as_ref().to_string(),
-                                        DisplayTypeEnum::ResourceText(ResourceReference(entity)),
-                                    ));
-
+                                    ResourceTypeEnum::Faith => {
+                                        "Minor miracles cultivate the people's faith."
+                                    }
+                                    ResourceTypeEnum::Populace => {
+                                        "Blessings of fertility bolster the populace."
+                                    }
+                                    ResourceTypeEnum::Military => {
+                                        "Visions of glorious crusades dance in their heads."
+                                    }
+                                    ResourceTypeEnum::Happiness => {
+                                        "You help an old woman find her keys."
+                                    }
+                                    ResourceTypeEnum::ERROR => {
+                                        "If you're seeing this, please report it as a bug alongside whatever else is around it."
+                                    }
+                                }
+                                .to_string(),
+                            })
+                            .with_children(|button| {
+                                button.spawn_bundle(text(
+                                    &asset_server,
+                                    resource_type.as_ref().to_string(),
+                                    DisplayTypeEnum::ResourceText(ResourceReference(entity)),
+                                ));
                                     // Resource Display
-                                    button
-                                        .spawn_bundle(resource_text(
-                                            &asset_server,
-                                            ResourceReference(entity), // *id,
-                                                                       // *resource_type,
-                                        ))
-                                        .insert(ResourceDisplayText);
-                                });
-                            // });
-                        }
+                                button
+                                    .spawn_bundle(resource_text(
+                                        &asset_server,
+                                        ResourceReference(entity), // *id,
+                                                                    // *resource_type,
+                                    ))
+                                    .insert(ResourceDisplayText);
+                            });
+                        // });
                     }
-                });
-        };
-    commands
+                }
+            });
+    };
+    commands // Spawn columns
         .spawn_bundle(row_perc(100., -1.))
         .insert(GameScreen)
         .with_children(|parent| {
@@ -301,8 +313,25 @@ fn spawn_game_screen(
             let (KingdomID(id), kingdom::Name(name)) = kingdom_iter.next().unwrap();
             kingdom_sidebar_generator(parent, &id, &name);
 
-            // Spacer
-            parent.spawn_bundle(column_perc(50., -1.));
+            // Log
+            parent
+                .spawn_bundle(column_perc(50., 100.))
+                .with_children(|parent| {
+                    parent
+                        .spawn_bundle(TextBundle {
+                            text: Text::with_section(
+                                "Your journey begins.",
+                                TextStyle {
+                                    font: asset_server.load(FONT_NAME),
+                                    font_size: 30.0,
+                                    color: Color::rgb(0.7, 0.7, 0.7),
+                                },
+                                Default::default(),
+                            ),
+                            ..default()
+                        })
+                        .insert(LogText);
+                });
 
             // Kingdom 2 Sidebar
             let (KingdomID(id), kingdom::Name(name)) = kingdom_iter.next().unwrap();
