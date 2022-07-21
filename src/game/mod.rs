@@ -1,6 +1,8 @@
+pub mod kingdom;
+
 use bevy::{prelude::*, utils::hashbrown::HashMap};
 
-use crate::kingdom::{Kingdom, KingdomID, Resource, ResourceType};
+use self::kingdom::{Kingdom, KingdomID, Resource, ResourceType};
 
 pub struct ResourceAlterationEvent {
     pub message: String,

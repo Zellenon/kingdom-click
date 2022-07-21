@@ -1,14 +1,12 @@
 use bevy::log::LogSettings;
 use bevy::prelude::*;
 
+use game::kingdom::*;
 use game::GamePlugin;
 use gui::GUIPlugin;
-use kingdom::*;
 
 mod game;
 mod gui;
-mod guiboiler;
-mod kingdom;
 
 const BACKGROUND_COLOR: Color = Color::rgb(0.05, 0.066, 0.09);
 

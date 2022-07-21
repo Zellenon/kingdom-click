@@ -1,9 +1,11 @@
+pub mod boilerplate;
+
 use bevy::text::Text2dBounds;
 use bevy::{prelude::*, ui::FocusPolicy};
 
+use self::boilerplate::*;
+use crate::game::kingdom::{self, Kingdom, KingdomID, Resource, ResourceType, ResourceTypeEnum};
 use crate::game::{GodActionEvent, Log, ResourceAlterationEvent, TurnState};
-use crate::guiboiler::*;
-use crate::kingdom::{self, Kingdom, KingdomID, Resource, ResourceType, ResourceTypeEnum};
 use crate::AppState;
 
 pub const FONT_NAME: &str = "fonts/Rise of Kingdom.ttf";
