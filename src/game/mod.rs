@@ -1,4 +1,6 @@
 pub mod kingdom;
+pub mod resource;
+pub mod task;
 
 use bevy::{prelude::*, utils::hashbrown::HashMap};
 

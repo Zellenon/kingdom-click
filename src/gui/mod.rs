@@ -4,7 +4,8 @@ use bevy::text::Text2dBounds;
 use bevy::{prelude::*, ui::FocusPolicy};
 
 use self::boilerplate::*;
-use crate::game::kingdom::{self, Kingdom, KingdomID, Resource, ResourceType, ResourceTypeEnum};
+use crate::game::kingdom::{self, Kingdom, KingdomID};
+use crate::game::resource::*;
 use crate::game::{GodActionEvent, Log, ResourceAlterationEvent, TurnState};
 use crate::AppState;
 
@@ -312,7 +313,7 @@ fn spawn_game_screen(
         .insert(GameScreen)
         .with_children(|parent| {
             // Kingdom 1 Sidebar
-            let (KingdomID(id), kingdom::Name(name)) = kingdom_iter.next().unwrap();
+            let (KingdomID(id), Name(name)) = kingdom_iter.next().unwrap();
             kingdom_sidebar_generator(parent, &id, &name);
 
             // Log
@@ -336,7 +337,7 @@ fn spawn_game_screen(
                 });
 
             // Kingdom 2 Sidebar
-            let (KingdomID(id), kingdom::Name(name)) = kingdom_iter.next().unwrap();
+            let (KingdomID(id), Name(name)) = kingdom_iter.next().unwrap();
             kingdom_sidebar_generator(parent, &id, &name);
         });
 }

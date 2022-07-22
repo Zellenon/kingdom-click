@@ -1,40 +1,11 @@
 use bevy::prelude::*;
 // use std::cmp::{max, min};
-use strum_macros::{AsRefStr, EnumIter};
+use super::resource::{Resource, ResourceType, ResourceTypeEnum};
 
 pub struct KingdomPlugin;
 
 #[derive(Debug, Component)]
 pub struct Kingdom;
-
-#[derive(Debug, Component)]
-pub struct Resource {
-    pub value: usize,
-    pub change: usize,
-}
-
-#[derive(Component)]
-pub struct ResourceType(pub ResourceTypeEnum);
-
-impl Default for ResourceType {
-    fn default() -> Self {
-        Self(ResourceTypeEnum::ERROR)
-    }
-}
-
-#[derive(Debug, EnumIter, AsRefStr, Clone, Copy)]
-pub enum ResourceTypeEnum {
-    Food,
-    Industry,
-    Faith,
-    Populace,
-    Military,
-    Happiness,
-    ERROR,
-}
-
-#[derive(Debug, Component)]
-pub struct Name(pub String);
 
 #[derive(Debug, Component, Default)]
 pub struct KingdomID(pub usize);
