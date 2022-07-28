@@ -4,7 +4,8 @@ pub mod task;
 
 use bevy::{prelude::*, utils::hashbrown::HashMap};
 
-use self::kingdom::{Kingdom, KingdomID, Resource, ResourceType};
+use self::kingdom::{Kingdom, KingdomID};
+use self::resource::{Resource, ResourceType};
 
 pub struct ResourceAlterationEvent {
     pub message: String,

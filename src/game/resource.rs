@@ -1,41 +1,59 @@
-use bevy::prelude::*;
-use strum_macros::{AsRefStr, EnumIter};
+use std::sync::Arc;
 
-#[derive(Debug, EnumIter, AsRefStr, Clone, Copy)]
-pub enum ResourceTypeEnum {
+use bevy::{prelude::*, utils::hashbrown::HashMap};
+use strum::IntoEnumIterator;
+use strum_macros::{AsRefStr, EnumCount, EnumIter};
+
+#[derive(Debug, EnumIter, EnumCount, AsRefStr, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ResourceTypes {
     Food,
     Industry,
     Faith,
     Populace,
     Military,
     Happiness,
-    ERROR,
 }
 
-#[derive(Debug, Component)]
+pub const StartingResources: [ResourceTypes; 6] = [
+    ResourceTypes::Food,
+    ResourceTypes::Industry,
+    ResourceTypes::Faith,
+    ResourceTypes::Populace,
+    ResourceTypes::Military,
+    ResourceTypes::Happiness,
+];
+
+#[derive(Debug, Component, Clone)]
 pub struct Resource {
     pub value: usize,
     pub change: usize,
 }
 
-#[derive(Component)]
-pub struct ResourceType(pub ResourceTypeEnum);
+#[derive(Component, PartialEq)]
+pub struct ResourceType(pub ResourceTypes);
 
-impl Default for ResourceType {
-    fn default() -> Self {
-        Self(ResourceTypeEnum::ERROR)
+#[derive(Component)]
+pub struct ResourceModification(
+    Arc<dyn Fn(KingdomResources) -> KingdomResources + Send + Sync + 'static>,
+);
+
+#[derive(Clone)]
+pub struct KingdomResources(HashMap<ResourceTypes, usize>);
+
+impl KingdomResources {
+    pub fn new() -> KingdomResources {
+        let resources = HashMap::new();
+        for resource_type in ResourceTypes::iter() {
+            resources.insert(resource_type, 0);
+        }
+        return KingdomResources(resources);
     }
 }
 
-#[derive(Component)]
-pub struct ResourceModification {
-    pub resource: Entity,
-    pub interaction: fn(usize) -> usize,
-}
-
-pub fn ResourceIncMod(resource: Entity, inc: usize) -> ResourceModification {
-    return ResourceModification {
-        resource,
-        interaction: |val: usize| val + inc,
-    };
+pub fn ResourceIncMod(resource: ResourceTypes, inc: usize) -> ResourceModification {
+    return ResourceModification(Arc::new(|kingdom_res: KingdomResources| {
+        let new_resources: KingdomResources = KingdomResources::new();
+        new_resources.0.insert(resource, inc);
+        return new_resources;
+    }));
 }

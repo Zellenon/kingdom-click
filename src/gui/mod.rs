@@ -66,7 +66,7 @@ pub enum ButtonTypeEnum {
 pub enum DisplayTypeEnum {
     StandardText(String),
     ResourceText(ResourceReference),
-    ResourceIcon(ResourceTypeEnum),
+    ResourceIcon(ResourceTypes),
 }
 
 #[derive()]
@@ -238,82 +238,78 @@ fn update_log(mut log_display_query: Query<(&LogText, &mut Text)>, log_text: Res
 fn spawn_game_screen(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    kingdom_query: Query<(&KingdomID, &kingdom::Name), With<Kingdom>>,
+    kingdom_query: Query<(&KingdomID, &Name), With<Kingdom>>,
     resource_query: Query<(Entity, &ResourceType, &KingdomID)>,
 ) {
     let mut kingdom_iter = kingdom_query.iter();
 
-    let kingdom_sidebar_generator = |parent: &mut ChildBuilder<'_, '_, '_>,
-                                     id: &usize,
-                                     name: &String| {
-        parent
-            .spawn_bundle(column_perc(25., 100.))
-            .with_children(|parent| {
-                parent.spawn_bundle(column_perc(100., 10.));
-                parent.spawn_bundle(text(
-                    &asset_server,
-                    format!("{}", name).to_string(),
-                    DisplayTypeEnum::StandardText(format!("{}", name).to_string()),
-                ));
-                for (entity, ResourceType(resource_type), KingdomID(resource_kingdom)) in
-                    resource_query.iter()
-                {
-                    if resource_kingdom == id {
-                        parent
-                            .spawn_bundle(button(ButtonTypeEnum::MainResourceButton))
-                            .insert(GodActionButton)
-                            .insert(ResourceReference(entity))
-                            .insert(ResourceInteractionButton {
-                                interactions: vec![(entity, |resource| resource + 1)],
-                                message: match resource_type {
-                                    ResourceTypeEnum::Food => "You bless the fields.",
-                                    ResourceTypeEnum::Industry => {
-                                        "You inspire the laborers with vigor."
+    let kingdom_sidebar_generator =
+        |parent: &mut ChildBuilder<'_, '_, '_>, id: &usize, name: &Name| {
+            parent
+                .spawn_bundle(column_perc(25., 100.))
+                .with_children(|parent| {
+                    parent.spawn_bundle(column_perc(100., 10.));
+                    parent.spawn_bundle(text(
+                        &asset_server,
+                        format!("{}", name).to_string(),
+                        DisplayTypeEnum::StandardText(format!("{}", name).to_string()),
+                    ));
+                    for (entity, ResourceType(resource_type), KingdomID(resource_kingdom)) in
+                        resource_query.iter()
+                    {
+                        if resource_kingdom == id {
+                            parent
+                                .spawn_bundle(button(ButtonTypeEnum::MainResourceButton))
+                                .insert(GodActionButton)
+                                .insert(ResourceReference(entity))
+                                .insert(ResourceInteractionButton {
+                                    interactions: vec![(entity, |resource| resource + 1)],
+                                    message: match resource_type {
+                                        ResourceTypes::Food => "You bless the fields.",
+                                        ResourceTypes::Industry => {
+                                            "You inspire the laborers with vigor."
+                                        }
+                                        ResourceTypes::Faith => {
+                                            "Minor miracles cultivate the people's faith."
+                                        }
+                                        ResourceTypes::Populace => {
+                                            "Blessings of fertility bolster the populace."
+                                        }
+                                        ResourceTypes::Military => {
+                                            "Visions of glorious crusades dance in their heads."
+                                        }
+                                        ResourceTypes::Happiness => {
+                                            "You help an old woman find her keys."
+                                        }
                                     }
-                                    ResourceTypeEnum::Faith => {
-                                        "Minor miracles cultivate the people's faith."
-                                    }
-                                    ResourceTypeEnum::Populace => {
-                                        "Blessings of fertility bolster the populace."
-                                    }
-                                    ResourceTypeEnum::Military => {
-                                        "Visions of glorious crusades dance in their heads."
-                                    }
-                                    ResourceTypeEnum::Happiness => {
-                                        "You help an old woman find her keys."
-                                    }
-                                    ResourceTypeEnum::ERROR => {
-                                        "If you're seeing this, please report it as a bug alongside whatever else is around it."
-                                    }
-                                }
-                                .to_string(),
-                            })
-                            .with_children(|button| {
-                                button.spawn_bundle(text(
-                                    &asset_server,
-                                    resource_type.as_ref().to_string(),
-                                    DisplayTypeEnum::ResourceText(ResourceReference(entity)),
-                                ));
-                                    // Resource Display
-                                button
-                                    .spawn_bundle(resource_text(
+                                    .to_string(),
+                                })
+                                .with_children(|button| {
+                                    button.spawn_bundle(text(
                                         &asset_server,
-                                        ResourceReference(entity), // *id,
-                                                                    // *resource_type,
-                                    ))
-                                    .insert(ResourceDisplayText);
-                            });
-                        // });
+                                        resource_type.as_ref().to_string(),
+                                        DisplayTypeEnum::ResourceText(ResourceReference(entity)),
+                                    ));
+                                    // Resource Display
+                                    button
+                                        .spawn_bundle(resource_text(
+                                            &asset_server,
+                                            ResourceReference(entity), // *id,
+                                                                       // *resource_type,
+                                        ))
+                                        .insert(ResourceDisplayText);
+                                });
+                            // });
+                        }
                     }
-                }
-            });
-    };
+                });
+        };
     commands // Spawn columns
         .spawn_bundle(row_perc(100., -1.))
         .insert(GameScreen)
         .with_children(|parent| {
             // Kingdom 1 Sidebar
-            let (KingdomID(id), Name(name)) = kingdom_iter.next().unwrap();
+            let (KingdomID(id), name) = kingdom_iter.next().unwrap();
             kingdom_sidebar_generator(parent, &id, &name);
 
             // Log
@@ -337,7 +333,7 @@ fn spawn_game_screen(
                 });
 
             // Kingdom 2 Sidebar
-            let (KingdomID(id), Name(name)) = kingdom_iter.next().unwrap();
+            let (KingdomID(id), name) = kingdom_iter.next().unwrap();
             kingdom_sidebar_generator(parent, &id, &name);
         });
 }

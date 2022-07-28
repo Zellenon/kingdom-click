@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 // use std::cmp::{max, min};
-use super::resource::{Resource, ResourceType, ResourceTypeEnum};
+use super::resource::{Resource, ResourceType, ResourceTypes, StartingResources};
 
 pub struct KingdomPlugin;
 
@@ -27,20 +27,12 @@ impl Plugin for KingdomPlugin {
 }
 
 fn setup_kingdoms(mut commands: Commands) {
-    let starter_resources = [
-        ResourceTypeEnum::Food,
-        ResourceTypeEnum::Industry,
-        ResourceTypeEnum::Faith,
-        ResourceTypeEnum::Populace,
-        ResourceTypeEnum::Military,
-        ResourceTypeEnum::Happiness,
-    ];
     for i in 1..=2 {
         commands
             .spawn()
-            .insert(Name(format!("Kingdom {}", i).to_string()))
+            .insert(Name::new(format!("Kingdom {}", i).to_string()))
             .with_children(|kingdom| {
-                for resource_type in starter_resources.iter() {
+                for resource_type in StartingResources.iter() {
                     kingdom
                         .spawn()
                         .insert(Resource {
