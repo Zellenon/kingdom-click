@@ -14,7 +14,7 @@ pub enum ResourceTypes {
     Happiness,
 }
 
-pub const StartingResources: [ResourceTypes; 6] = [
+pub const STARTING_RESOURCES: [ResourceTypes; 6] = [
     ResourceTypes::Food,
     ResourceTypes::Industry,
     ResourceTypes::Faith,
@@ -33,27 +33,35 @@ pub struct Resource {
 pub struct ResourceType(pub ResourceTypes);
 
 #[derive(Component)]
-pub struct ResourceModification(
-    Arc<dyn Fn(KingdomResources) -> KingdomResources + Send + Sync + 'static>,
-);
+pub struct ResourceModification(Box<dyn Fn(KingdomResources) -> KingdomResources + Send + Sync>);
+
+impl ResourceModification {
+    pub fn IncMod(resource: ResourceTypes, inc: usize) -> Self {
+        return ResourceModification(Box::new(move |kingdom_res: KingdomResources| {
+            let mut new_resources: KingdomResources = KingdomResources::new();
+            new_resources.0.insert(resource, inc);
+            return new_resources;
+        }));
+    }
+}
 
 #[derive(Clone)]
 pub struct KingdomResources(HashMap<ResourceTypes, usize>);
 
 impl KingdomResources {
     pub fn new() -> KingdomResources {
-        let resources = HashMap::new();
+        let mut resources = HashMap::new();
         for resource_type in ResourceTypes::iter() {
             resources.insert(resource_type, 0);
         }
         return KingdomResources(resources);
     }
-}
 
-pub fn ResourceIncMod(resource: ResourceTypes, inc: usize) -> ResourceModification {
-    return ResourceModification(Arc::new(|kingdom_res: KingdomResources| {
-        let new_resources: KingdomResources = KingdomResources::new();
-        new_resources.0.insert(resource, inc);
-        return new_resources;
-    }));
+    pub fn set(&mut self, resource: ResourceTypes, value: usize) {
+        (*self).0.insert(resource, value);
+    }
+
+    pub fn add(&mut self, resource: ResourceTypes, value: usize) {
+        *((*self).0.entry(resource).or_insert(0)) += value;
+    }
 }

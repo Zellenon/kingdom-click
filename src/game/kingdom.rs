@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 // use std::cmp::{max, min};
-use super::resource::{Resource, ResourceType, ResourceTypes, StartingResources};
+use super::resource::{Resource, ResourceType, ResourceTypes, STARTING_RESOURCES};
 
 pub struct KingdomPlugin;
 
@@ -32,7 +32,7 @@ fn setup_kingdoms(mut commands: Commands) {
             .spawn()
             .insert(Name::new(format!("Kingdom {}", i).to_string()))
             .with_children(|kingdom| {
-                for resource_type in StartingResources.iter() {
+                for resource_type in STARTING_RESOURCES.iter() {
                     kingdom
                         .spawn()
                         .insert(Resource {
